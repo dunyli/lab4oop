@@ -13,26 +13,25 @@
 #include "TrafficLightRule.h"
 #include "LineCrossRule.h"
 #include "BusLaneRule.h"
+#include "EvidenceCollector.h"
 #include "EvidenceCollectorProxy.h"
+#include "ResolutionGenerator.h"
 #include "ResolutionProxy.h"
 #include "PassengerCar.h"
 #include "Bus.h"
 
 using namespace std;
 
-// Вспомогательная функция для создания тестового ТС
 Vehicle* createTestCar(string id, int speed, int lane, string type = "PassengerCar") {
     Vehicle* v;
     if (type == "Bus") v = new Bus(id);
     else v = new PassengerCar(id);
-
     v->speed = speed;
     v->lane = lane;
     v->plate = new LicensePlate("A123BC");
     return v;
 }
 
-// Функция для получения всех кадров из буфера
 vector<Frame*> getAllFrames(queue<Frame*> buffer) {
     vector<Frame*> frames;
     queue<Frame*> temp = buffer;
@@ -43,73 +42,83 @@ vector<Frame*> getAllFrames(queue<Frame*> buffer) {
     return frames;
 }
 
-// Функция для демонстрации конфигурации
-void demonstrateConfig(string name,
-    ControlZone* zone,
-    EvidenceCollectorProxy* evidenceProxy,
-    ResolutionProxy* resolutionProxy,
-    int bufferSize,
-    Vehicle* testCar) {
+void demonstrateConfig(string name, ControlZone* zone, EvidenceCollector* evidenceCollector,
+    ResolutionGenerator* resolutionGenerator, int bufferSize, Vehicle* testCar, bool useProxy) {
+    cout << "\n" << string(70, '=') << endl;
+    cout << "КОНФИГУРАЦИЯ: " << name << endl;
+    cout << string(70, '=') << endl;
 
-    cout << "\nКОНФИГУРАЦИЯ: " << name << endl;
+    cout << "\nКОМПОНЕНТЫ КОНФИГУРАЦИИ\n";
 
-    // Пояснение по прокси
-    cout << "\n--- РАБОТА ПРОКСИ В ДАННОЙ КОНФИГУРАЦИИ ---\n";
-    cout << "VideoProcessorProxy: буферизация кадров (размер буфера: " << bufferSize << ")\n";
-    cout << "  Отвечает за сохранение истории кадров для последующего доступа\n";
-    cout << "EvidenceCollectorProxy: контроль качества доказательств\n";
-    cout << "  Проверяет: качество >= " << evidenceProxy->minQuality << "/10, кадров до: "
-        << evidenceProxy->framesBefore << ", после: " << evidenceProxy->framesAfter << "\n";
-    cout << "ResolutionProxy: финальная проверка перед постановлением\n";
-    cout << "  Проверяет: метаданные: " << (resolutionProxy->requireMetadata ? "да" : "нет")
-        << ", уверенность >= " << resolutionProxy->minConfidence << "/10, автозапрос: "
-        << (resolutionProxy->autoRequest ? "да" : "нет") << "\n";
+    VideoProcessor* processor = nullptr;
+    VideoProcessorProxy* processorProxy = nullptr;
 
-    // Создаем процессор и прокси
-    VideoProcessor* processor = new VideoProcessor(zone, evidenceProxy, resolutionProxy);
-    VideoProcessorProxy* processorProxy = new VideoProcessorProxy(processor, bufferSize);
+    if (useProxy && bufferSize > 0) {
+        processorProxy = new VideoProcessorProxy(zone, evidenceCollector, resolutionGenerator, bufferSize);
+        processor = processorProxy;
+        cout << "Видеопроцессор: VideoProcessorProxy (буфер=" << bufferSize << ")\n";
+    }
+    else {
+        processor = new VideoProcessor(zone, evidenceCollector, resolutionGenerator);
+        cout << "Видеопроцессор: VideoProcessor\n";
+    }
+
+    EvidenceCollectorProxy* ecProxy = dynamic_cast<EvidenceCollectorProxy*>(evidenceCollector);
+    if (ecProxy) {
+        cout << "Сборщик: EvidenceCollectorProxy (качество>=" << ecProxy->getMinQuality()
+            << ", кадров до=" << ecProxy->getFramesBefore() << ", после=" << ecProxy->getFramesAfter() << ")\n";
+    }
+    else {
+        cout << "Сборщик: EvidenceCollector (без проверок)\n";
+    }
+
+    ResolutionProxy* rpProxy = dynamic_cast<ResolutionProxy*>(resolutionGenerator);
+    if (rpProxy) {
+        cout << "Генератор: ResolutionProxy (метаданные=" << (rpProxy->getRequireMetadata() ? "да" : "нет")
+            << ", уверенность>=" << rpProxy->getMinConfidence() << ", автозапрос=" << (rpProxy->getAutoRequest() ? "да" : "нет") << ")\n";
+    }
+    else {
+        cout << "Генератор: ResolutionGenerator (без проверок)\n";
+    }
+
     Camera* camera = new Camera();
 
-    cout << "\nЗаполнение буфера\n";
-    for (int i = 0; i < bufferSize; i++) {
-        Frame* f = camera->getFrame();
-        processorProxy->buffer.push(f);
+    if (useProxy && bufferSize > 0 && processorProxy) {
+        cout << "\nЗаполнение буфера (" << bufferSize << " кадров) \n";
+        for (int i = 0; i < bufferSize; i++) {
+            Frame* f = camera->getFrame();
+            processorProxy->addToBuffer(f);
+        }
+        cout << "Буфер заполнен, размер: " << processorProxy->getBufferSize() << " кадров\n";
     }
-    cout << "Буфер заполнен, размер: " << processorProxy->buffer.size() << " кадров\n";
 
-    // Тестируем нарушения с передачей кадров из буфера
     cout << "\nТЕСТИРОВАНИЕ НАРУШЕНИЙ\n";
 
-    // Получаем кадры из буфера
-    vector<Frame*> allFrames = getAllFrames(processorProxy->buffer);
-    cout << "Получено " << allFrames.size() << " кадров из буфера для анализа\n";
+    vector<Frame*> allFrames;
+    if (processorProxy) {
+        allFrames = processorProxy->getAllFrames();
+        cout << "Получено " << allFrames.size() << " кадров из буфера\n";
+    }
 
-    // Тест 1: Превышение скорости (должно пройти)
+    // Тест 1
     testCar->speed = 95;
-    cout << "\n ТЕСТ 1: Превышение скорости (" << testCar->speed << " км/ч) - высокое качество, достаточно кадров\n";
-    cout << "   [VideoProcessorProxy] Передает запрос к буферу\n";
-    processor->processFrameWithFrames(testCar, 9, 10, allFrames); // качество 9, уверенность 10
+    cout << "\n ТЕСТ 1: Превышение скорости (" << testCar->speed << " км/ч) - высокое качество\n";
+    processor->processFrameWithFrames(testCar, 9, 10, allFrames);
 
-    // Тест 2: Превышение скорости (низкое качество)
+    // Тест 2
     testCar->speed = 82;
-    cout << "\n ТЕСТ 2: Превышение скорости (" << testCar->speed << " км/ч) - низкое качество кадра\n";
-    cout << "   [VideoProcessorProxy] Передает запрос к буферу\n";
-    processor->processFrameWithFrames(testCar, 3, 10, allFrames); // качество 3
+    cout << "\n ТЕСТ 2: Превышение скорости (" << testCar->speed << " км/ч) - низкое качество\n";
+    processor->processFrameWithFrames(testCar, 3, 10, allFrames);
 
-    // Тест 3: Автобус на выделенной полосе (не нарушение)
+    // Тест 3
     Vehicle* bus = new Bus("BUS_001");
     bus->speed = 55;
     bus->lane = 1;
     bus->plate = new LicensePlate("B456CM");
-
-    cout << "\nТЕСТ 3: Автобус на выделенной полосе (полоса 1) - не должно быть нарушения\n";
-    cout << "   [VideoProcessorProxy] Передает запрос к буферу\n";
+    cout << "\n▶ ТЕСТ 3: Автобус на выделенной полосе - не должно быть нарушения\n";
     processor->processFrameWithFrames(bus, 9, 10, allFrames);
 
     delete bus;
-
-    // Очистка
-    delete processorProxy;
     delete processor;
     delete camera;
 }
@@ -117,106 +126,82 @@ void demonstrateConfig(string name,
 int main() {
     setlocale(LC_ALL, "rus");
     srand(time(nullptr));
-
     cout << "СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ ПДД" << endl;
-    cout << "ДЕМОНСТРАЦИЯ РАБОТЫ В ТРЕХ КОНФИГУРАЦИЯХ" << endl;
 
-    cout << "\n--- ОБЩАЯ СХЕМА РАБОТЫ ПРОКСИ ---\n";
-    cout << "1. VideoProcessorProxy (Фильтрующий прокси):\n";
-    cout << "Перехватывает все кадры от камеры\n";
-    cout << "Сохраняет их в буфер (кольцевой буфер)\n";
-    cout << "При запросе возвращает кадры за последние N секунд\n";
-    cout << " Позволяет получить кадры ДО момента нарушения\n\n";
+    cout << "\nОБЩАЯ СХЕМА РАБОТЫ ПРОКСИ\n";
+    cout << "1. VideoProcessorProxy (Фильтрующий) - наследник VideoProcessor, буферизация кадров\n";
+    cout << "2. EvidenceCollectorProxy (Защитный) - наследник EvidenceCollector, проверка качества\n";
+    cout << "3. ResolutionProxy (Защитный) - наследник ResolutionGenerator, финальная проверка\n";
 
-    cout << "2. EvidenceCollectorProxy (Защитный прокси):\n";
-    cout << "Проверяет качество каждого кадра (четкость, освещенность)\n";
-    cout << "Проверяет наличие кадров до и после нарушения\n";
-    cout << "Отсеивает бракованные материалы\n\n";
-
-    cout << "3. ResolutionProxy (Защитный прокси):\n";
-    cout << " Проверяет полноту доказательств\n";
-    cout << " Проверяет читаемость номерного знака\n";
-    cout << " Проверяет метаданные и временные метки\n";
-    cout << " Финальная проверка перед выпиской штрафа\n\n";
-
-    // КОНФИГУРАЦИЯ 1: Перекресток в центре города
+    // Конфигурация 1
     ControlZone* zone1 = new ControlZone();
-    zone1->addRule(new SpeedRule(60));      // лимит 60
-    zone1->addRule(new TrafficLightRule()); // контроль светофора
-    zone1->addRule(new LineCrossRule());    // контроль стоп-линии
-    zone1->addRule(new BusLaneRule(1));     // выделенная полоса
+    zone1->addRule(new SpeedRule(60));
+    zone1->addRule(new TrafficLightRule());
+    zone1->addRule(new LineCrossRule());
+    zone1->addRule(new BusLaneRule(1));
 
-    EvidenceCollectorProxy* evidenceProxy1 = new EvidenceCollectorProxy(9, 3, 3);  // качество 9, 3 кадра до, 3 после
-    ResolutionProxy* resolutionProxy1 = new ResolutionProxy(true, 9, false);      // метаданные да, уверенность 9, без автозапроса
-
+    EvidenceCollector* evidence1 = new EvidenceCollectorProxy(9, 3, 3);
+    ResolutionGenerator* resolution1 = new ResolutionProxy(true, 9, false);
     Vehicle* testCar1 = createTestCar("CAR_001", 75, 1, "PassengerCar");
 
-    demonstrateConfig("ПЕРЕКРЕСТОК В ЦЕНТРЕ ГОРОДА\nСтрогие требования",
-        zone1, evidenceProxy1, resolutionProxy1, 300, testCar1);
+    demonstrateConfig("ПЕРЕКРЕСТОК В ЦЕНТРЕ ГОРОДА (строгие требования)",
+        zone1, evidence1, resolution1, 300, testCar1, true);
 
     delete testCar1;
 
-    // КОНФИГУРАЦИЯ 2: Загородная трасса
+    // Конфигурация 2
     ControlZone* zone2 = new ControlZone();
-    zone2->addRule(new SpeedRule(90));      // только скорость, лимит 90
+    zone2->addRule(new SpeedRule(90));
 
-    EvidenceCollectorProxy* evidenceProxy2 = new EvidenceCollectorProxy(7, 2, 1);  // качество 7, 2 кадра до, 1 после
-    ResolutionProxy* resolutionProxy2 = new ResolutionProxy(false, 7, false);     // метаданные нет, уверенность 7
-
+    EvidenceCollector* evidence2 = new EvidenceCollectorProxy(7, 2, 1);
+    ResolutionGenerator* resolution2 = new ResolutionProxy(false, 7, false);
     Vehicle* testCar2 = createTestCar("CAR_002", 105, 1, "PassengerCar");
 
-    demonstrateConfig("ЗАГОРОДНАЯ ТРАССА\nСниженные требования",
-        zone2, evidenceProxy2, resolutionProxy2, 450, testCar2);
+    demonstrateConfig("ЗАГОРОДНАЯ ТРАССА (сниженные требования)",
+        zone2, evidence2, resolution2, 450, testCar2, true);
 
     delete testCar2;
-    // КОНФИГУРАЦИЯ 3: Выделенная полоса в часы пик
+
+    // Конфигурация 3
     ControlZone* zone3 = new ControlZone();
-    zone3->addRule(new SpeedRule(60));      // скорость 60
-    zone3->addRule(new BusLaneRule(1));     // выделенная полоса
+    zone3->addRule(new SpeedRule(60));
+    zone3->addRule(new BusLaneRule(1));
 
-    EvidenceCollectorProxy* evidenceProxy3 = new EvidenceCollectorProxy(8, 2, 1);  // качество 8, 2 кадра до, 1 после
-    ResolutionProxy* resolutionProxy3 = new ResolutionProxy(true, 8, true);       // метаданные да, уверенность 8, с автозапросом
-
+    EvidenceCollector* evidence3 = new EvidenceCollectorProxy(8, 2, 1);
+    ResolutionGenerator* resolution3 = new ResolutionProxy(true, 8, true);
     Vehicle* testCar3 = createTestCar("CAR_003", 70, 1, "PassengerCar");
 
-    demonstrateConfig("ВЫДЕЛЕННАЯ ПОЛОСА В ЧАСЫ ПИК\nСредние требования",
-        zone3, evidenceProxy3, resolutionProxy3, 150, testCar3);
+    demonstrateConfig("ВЫДЕЛЕННАЯ ПОЛОСА В ЧАСЫ ПИК (средние требования)",
+        zone3, evidence3, resolution3, 150, testCar3, true);
 
     delete testCar3;
 
-    // ИТОГ
-    cout << "ИТОГ ДЕМОНСТРАЦИИ:\n";
+    // Конфигурация 4 (без прокси)
+    ControlZone* zone4 = new ControlZone();
+    zone4->addRule(new SpeedRule(60));
 
-    cout << "\nVideoProcessorProxy успешно буферизирует кадры и предоставляет\n";
-    cout << "  доступ к истории для анализа нарушений\n";
+    EvidenceCollector* evidence4 = new EvidenceCollector();
+    ResolutionGenerator* resolution4 = new ResolutionGenerator();
+    Vehicle* testCar4 = createTestCar("CAR_004", 85, 1, "PassengerCar");
 
-    cout << "\nEvidenceCollectorProxy эффективно отсеивает некачественные материалы:\n";
-    cout << "В конфигурации 1 (перекресток) - строгий отбор (качество 9)\n";
-    cout << "В конфигурации 2 (трасса) - сниженные требования (качество 7)\n";
-    cout << "В конфигурации 3 (полоса) - средние требования (качество 8)\n";
+    demonstrateConfig("МИНИМАЛЬНАЯ НАГРУЗКА (без прокси)",
+        zone4, evidence4, resolution4, 0, testCar4, false);
 
-    cout << "\nResolutionProxy выполняет финальную проверку:\n";
-    cout << "Проверяет наличие доказательств\n";
-    cout << "Проверяет уверенность распознавания номера\n";
-    cout << "Рассчитывает сумму штрафа\n";
+    delete testCar4;
 
-    cout << "\nДЕЛЕГИРОВАНИЕ: VideoProcessor делегирует проверку правилам,\n";
-    cout << "  а сбор доказательств и формирование постановления - прокси\n";
+    cout << "\n" << string(70, '=') << endl;
+    cout << "ИТОГ ДЕМОНСТРАЦИИ:" << endl;
+    cout << "VideoProcessorProxy (наследник VideoProcessor) - буферизация кадров\n";
+    cout << "EvidenceCollectorProxy (наследник EvidenceCollector) - проверка качества\n";
+    cout << "ResolutionProxy (наследник ResolutionGenerator) - финальная проверка\n";
+    cout << "ДЕЛЕГИРОВАНИЕ: VideoProcessor → ControlZone → Rule\n";
+    cout << string(70, '=') << endl;
 
-    // Очистка
-    delete zone1;
-    delete evidenceProxy1;
-    delete resolutionProxy1;
-
-    delete zone2;
-    delete evidenceProxy2;
-    delete resolutionProxy2;
-
-    delete zone3;
-    delete evidenceProxy3;
-    delete resolutionProxy3;
+    delete zone1; delete evidence1; delete resolution1;
+    delete zone2; delete evidence2; delete resolution2;
+    delete zone3; delete evidence3; delete resolution3;
+    delete zone4; delete evidence4; delete resolution4;
 
     cout << "\nРАБОТА ЗАВЕРШЕНА\n";
-
     return 0;
 }

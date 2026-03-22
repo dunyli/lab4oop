@@ -1,19 +1,20 @@
 #pragma once
-#include "Resolution.h"
-#include "Evidence.h"
+#include "ResolutionGenerator.h"
 
 using namespace std;
 
-// Класс-прокси для финальной проверки перед созданием постановления
-class ResolutionProxy {
+class ResolutionProxy : public ResolutionGenerator {
+private:
+    bool requireMetadata;
+    int minConfidence;
+    bool autoRequest;
+
 public:
-    bool requireMetadata;      // Требовать ли проверку метаданных
-    int minConfidence;         // Минимальная уверенность распознавания номера (0-10)
-    bool autoRequest;          // Автоматически запрашивать недостающие данные
-
-    // Конструктор с параметрами настройки
     ResolutionProxy(bool meta, int conf = 9, bool autoReq = false);
+    Resolution* generate(Evidence* e, int speed, int confidence = 10) override;
 
-    // Метод генерации постановления с проверкой
-    Resolution* generate(Evidence* e, int speed, int confidence = 10);
+    // Геттеры
+    bool getRequireMetadata() const { return requireMetadata; }
+    int getMinConfidence() const { return minConfidence; }
+    bool getAutoRequest() const { return autoRequest; }
 };

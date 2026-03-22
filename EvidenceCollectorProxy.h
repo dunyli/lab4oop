@@ -1,19 +1,21 @@
 #pragma once
-#include "Evidence.h"
+#include "EvidenceCollector.h"
 #include <vector>
 
 using namespace std;
 
-// Класс-прокси для сбора доказательств с проверкой качества
-class EvidenceCollectorProxy {
+class EvidenceCollectorProxy : public EvidenceCollector {
+private:
+    int minQuality;
+    int framesBefore;
+    int framesAfter;
+
 public:
-    int minQuality;      // Минимальный порог качества кадра (0-10)
-    int framesBefore;    // Сколько кадров должно быть ДО нарушения
-    int framesAfter;     // Сколько кадров должно быть ПОСЛЕ нарушения
-
-    // Конструктор с параметрами настройки
     EvidenceCollectorProxy(int q, int before = 3, int after = 3);
+    Evidence* collect(Violation* v, vector<Frame*>& frames, int quality, long violationTime = 0) override;
 
-    // Метод сбора доказательств с проверкой качества и количества кадров
-    Evidence* collect(Violation* v, vector<Frame*>& frames, int quality, long violationTime = 0);
+    // Геттеры
+    int getMinQuality() const { return minQuality; }
+    int getFramesBefore() const { return framesBefore; }
+    int getFramesAfter() const { return framesAfter; }
 };

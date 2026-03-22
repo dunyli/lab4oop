@@ -1,24 +1,25 @@
 ﻿#pragma once
 #include "ControlZone.h"
-#include "EvidenceCollectorProxy.h"
-#include "ResolutionProxy.h"
+#include "EvidenceCollector.h"
+#include "ResolutionGenerator.h"
 #include <vector>
 
 using namespace std;
 
-// Главный класс видеопроцессора, который координирует всю работу системы
 class VideoProcessor {
+protected:
+    ControlZone* zone;
+    EvidenceCollector* evidenceCollector;
+    ResolutionGenerator* resolutionGenerator;
+
 public:
-    ControlZone* zone;                 // Зона контроля с правилами
-    EvidenceCollectorProxy* evidenceProxy; // Прокси для сбора доказательств
-    ResolutionProxy* resolutionProxy;   // Прокси для формирования постановлений
+    VideoProcessor(ControlZone* z, EvidenceCollector* ec, ResolutionGenerator* rg);
+    virtual ~VideoProcessor();
 
-    // Конструктор
-    VideoProcessor(ControlZone* z, EvidenceCollectorProxy* ep, ResolutionProxy* rp);
+    virtual void processFrame(Frame* frame, Vehicle* v, int quality, int confidence = 10);
+    virtual void processFrameWithFrames(Vehicle* v, int quality, int confidence, vector<Frame*>& frames);
 
-    // Обработка кадра с одним текущим кадром
-    void processFrame(Frame* frame, Vehicle* v, int quality, int confidence = 10);
-
-    // Обработка нарушения с использованием готового набора кадров из буфера
-    void processFrameWithFrames(Vehicle* v, int quality, int confidence, vector<Frame*>& frames);
+    ControlZone* getZone() const { return zone; }
+    EvidenceCollector* getEvidenceCollector() const { return evidenceCollector; }
+    ResolutionGenerator* getResolutionGenerator() const { return resolutionGenerator; }
 };

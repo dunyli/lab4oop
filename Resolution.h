@@ -4,9 +4,10 @@
 
 using namespace std;
 
+// Класс данных - постановление о штрафе
 class Resolution {
 public:
-    std::string id;
+    string id;
     int amount;
 
     Resolution(string i, int a) : id(i), amount(a) {}

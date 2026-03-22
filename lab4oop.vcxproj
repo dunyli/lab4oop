@@ -145,6 +145,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="ControlZone.cpp" />
     <ClCompile Include="Evidence.cpp" />
+    <ClCompile Include="EvidenceCollector.cpp" />
     <ClCompile Include="EvidenceCollectorProxy.cpp" />
     <ClCompile Include="Frame.cpp" />
     <ClCompile Include="lab4oop.cpp" />
@@ -156,6 +157,7 @@
     <ClCompile Include="Point.cpp" />
     <ClCompile Include="RedLightViolation.cpp" />
     <ClCompile Include="Resolution.cpp" />
+    <ClCompile Include="ResolutionGenerator.cpp" />
     <ClCompile Include="ResolutionProxy.cpp" />
     <ClCompile Include="SpeedRule.cpp" />
     <ClCompile Include="SpeedViolation.cpp" />
@@ -173,6 +175,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="ControlZone.h" />
     <ClInclude Include="Evidence.h" />
+    <ClInclude Include="EvidenceCollector.h" />
     <ClInclude Include="EvidenceCollectorProxy.h" />
     <ClInclude Include="Frame.h" />
     <ClInclude Include="LicensePlate.h" />
@@ -183,6 +186,7 @@
     <ClInclude Include="Point.h" />
     <ClInclude Include="RedLightViolation.h" />
     <ClInclude Include="Resolution.h" />
+    <ClInclude Include="ResolutionGenerator.h" />
     <ClInclude Include="ResolutionProxy.h" />
     <ClInclude Include="Rule.h" />
     <ClInclude Include="SpeedRule.h" />

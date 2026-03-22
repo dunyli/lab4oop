@@ -5,20 +5,20 @@
 
 using namespace std;
 
-// Класс-прокси для буферизации видеопотока
-class VideoProcessorProxy {
-public:
-    queue<Frame*> buffer;        // Буфер для хранения кадров
-    int maxSize;                  // Максимальный размер буфера
-    VideoProcessor* realProcessor; // Реальный видеопроцессор
+class VideoProcessorProxy : public VideoProcessor {
+private:
+    queue<Frame*> buffer;
+    int maxSize;
 
-    // Конструктор и деструктор
-    VideoProcessorProxy(VideoProcessor* p, int s);
+public:
+    VideoProcessorProxy(ControlZone* z, EvidenceCollector* ec, ResolutionGenerator* rg, int bufferSize);
     ~VideoProcessorProxy();
 
-    // Методы
-    void processFrame(Frame* frame, Vehicle* v, int quality, int confidence = 10);
+    void processFrame(Frame* frame, Vehicle* v, int quality, int confidence = 10) override;
+    void processFrameWithFrames(Vehicle* v, int quality, int confidence, vector<Frame*>& frames) override;
+
     vector<Frame*> getAllFrames();
-    int getBufferSize();
+    int getBufferSize() const;
     void clearBuffer();
+    void addToBuffer(Frame* frame);
 };
