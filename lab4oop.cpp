@@ -44,9 +44,7 @@ vector<Frame*> getAllFrames(queue<Frame*> buffer) {
 
 void demonstrateConfig(string name, ControlZone* zone, EvidenceCollector* evidenceCollector,
     ResolutionGenerator* resolutionGenerator, int bufferSize, Vehicle* testCar, bool useProxy) {
-    cout << "\n" << string(70, '=') << endl;
     cout << "КОНФИГУРАЦИЯ: " << name << endl;
-    cout << string(70, '=') << endl;
 
     cout << "\nКОМПОНЕНТЫ КОНФИГУРАЦИИ\n";
 
@@ -115,7 +113,7 @@ void demonstrateConfig(string name, ControlZone* zone, EvidenceCollector* eviden
     bus->speed = 55;
     bus->lane = 1;
     bus->plate = new LicensePlate("B456CM");
-    cout << "\n▶ ТЕСТ 3: Автобус на выделенной полосе - не должно быть нарушения\n";
+    cout << "\nТЕСТ 3: Автобус на выделенной полосе - не должно быть нарушения\n";
     processor->processFrameWithFrames(bus, 9, 10, allFrames);
 
     delete bus;
@@ -194,7 +192,7 @@ int main() {
     cout << "VideoProcessorProxy (наследник VideoProcessor) - буферизация кадров\n";
     cout << "EvidenceCollectorProxy (наследник EvidenceCollector) - проверка качества\n";
     cout << "ResolutionProxy (наследник ResolutionGenerator) - финальная проверка\n";
-    cout << "ДЕЛЕГИРОВАНИЕ: VideoProcessor → ControlZone → Rule\n";
+    cout << "ДЕЛЕГИРОВАНИЕ: VideoProcessor - ControlZone - Rule\n";
     cout << string(70, '=') << endl;
 
     delete zone1; delete evidence1; delete resolution1;
