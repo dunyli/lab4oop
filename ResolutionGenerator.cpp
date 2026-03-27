@@ -1,4 +1,5 @@
 #include "ResolutionGenerator.h"
+#include "Resolution.h"
 #include <iostream>
 
 Resolution* ResolutionGenerator::generate(Evidence* e, int speed, int confidence) {

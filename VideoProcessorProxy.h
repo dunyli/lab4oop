@@ -2,6 +2,8 @@
 #include <queue>
 #include <vector>
 #include "VideoProcessor.h"
+#include "Frame.h"
+#include "Vehicle.h"
 
 using namespace std;
 

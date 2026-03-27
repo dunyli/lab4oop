@@ -2,6 +2,10 @@
 #include "ControlZone.h"
 #include "EvidenceCollector.h"
 #include "ResolutionGenerator.h"
+#include "Frame.h"
+#include "Vehicle.h"
+#include "Resolution.h"
+#include "Evidence.h"
 #include <vector>
 
 using namespace std;

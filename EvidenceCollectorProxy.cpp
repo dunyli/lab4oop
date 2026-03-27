@@ -1,4 +1,5 @@
 #include "EvidenceCollectorProxy.h"
+#include "EvidenceCollector.h"
 #include <iostream>
 #include <string>
 #include <ctime>

@@ -1,4 +1,5 @@
 #include "VideoProcessorProxy.h"
+#include "Frame.h"
 #include <iostream>
 
 using namespace std;

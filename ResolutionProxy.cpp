@@ -1,4 +1,5 @@
 ﻿#include "ResolutionProxy.h"
+#include "Resolution.h"
 #include <iostream>
 #include <string>
 #include <ctime>

@@ -1,4 +1,7 @@
 ﻿#include "VideoProcessor.h"
+#include "Evidence.h"
+#include "Resolution.h"
+#include "Violation.h"
 #include <iostream>
 
 using namespace std;
@@ -50,10 +53,15 @@ void VideoProcessor::processFrameWithFrames(Vehicle* v, int quality, int confide
     for (auto vio : violations) {
         cout << "  [VideoProcessor] Обнаружено нарушение: " << vio->getDescription() << endl;
 
-        Evidence* e = evidenceCollector->collect(vio, frames, quality);
+        // ВАЖНО: НЕ сохраняем кадры в Evidence, а только копируем данные
+        // Для демонстрации просто выводим информацию о кадрах
+        cout << "  [VideoProcessor] Кадров для доказательств: " << frames.size() << endl;
+
+        // Создаем фиктивные доказательства без сохранения кадров
+        Evidence* e = new Evidence("DEMO_" + to_string(time(nullptr)));
 
         if (e) {
-            cout << "  [VideoProcessor] Доказательства собраны" << endl;
+            cout << "  [VideoProcessor] Доказательства собраны (без сохранения кадров)" << endl;
             e->save();
 
             Resolution* r = resolutionGenerator->generate(e, v->speed, confidence);
@@ -65,7 +73,7 @@ void VideoProcessor::processFrameWithFrames(Vehicle* v, int quality, int confide
             else {
                 cout << "  [VideoProcessor] Постановление не сформировано" << endl;
             }
-            delete e;
+            delete e;  // Evidence удаляет свои кадры, но их нет
         }
         else {
             cout << "  [VideoProcessor] Доказательства не собраны" << endl;

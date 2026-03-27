@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <list>
 #include <locale>
 #include "Camera.h"
 #include "VideoProcessor.h"
@@ -21,242 +22,291 @@
 #include "Bus.h"
 #include "LicensePlate.h"
 #include "Frame.h"
+#include "Violation.h"
+#include "SpeedViolation.h"
+#include "Evidence.h"
+#include "Resolution.h"
+#include "LaserSensor.h"
+#include "LaserAdapter.h"
+#include "RadarSensor.h"
+#include "RadarAdapter.h"
+#include "DescriptionViolation.h"
+#include "PriorityViolation.h"
+#include "SimpleFrameBuffer.h"
+#include "CompositeFrameBuffer.h"
+#include "FrameIterator.h"
 
 using namespace std;
 
-// Вспомогательная функция для создания тестового транспортного средства
 Vehicle* createTestCar(string id, int speed, int lane, string type = "PassengerCar") {
     Vehicle* v;
-    if (type == "Bus") {
-        v = new Bus(id);
-    }
-    else {
-        v = new PassengerCar(id);
-    }
+    if (type == "Bus") v = new Bus(id);
+    else v = new PassengerCar(id);
     v->speed = speed;
     v->lane = lane;
-    v->plate = new LicensePlate("A123BC", "122");
+    v->plate = new LicensePlate("A123BC");
     return v;
 }
 
-// Функция для получения всех кадров из буфера
-vector<Frame*> getAllFrames(queue<Frame*> buffer) {
-    vector<Frame*> frames;
-    queue<Frame*> temp = buffer;
-    while (!temp.empty()) {
-        frames.push_back(temp.front());
-        temp.pop();
-    }
-    return frames;
-}
-
-// Функция для демонстрации работы конфигурации
-void demonstrateConfig(string name, ControlZone* zone, EvidenceCollector* evidenceCollector,
-    ResolutionGenerator* resolutionGenerator, int bufferSize,
-    Vehicle* testCar, bool useProxy) {
-
-    cout << "\n" << string(70, '=') << endl;
-    cout << "КОНФИГУРАЦИЯ: " << name << endl;
-    cout << string(70, '=') << endl;
-
-    cout << "\n--- КОМПОНЕНТЫ КОНФИГУРАЦИИ ---\n";
-
-    VideoProcessor* processor = nullptr;
-    VideoProcessorProxy* processorProxy = nullptr;
-
-    // Создание видеопроцессора (базовый или прокси)
-    if (useProxy && bufferSize > 0) {
-        processorProxy = new VideoProcessorProxy(zone, evidenceCollector, resolutionGenerator, bufferSize);
-        processor = processorProxy;
-        cout << "Видеопроцессор: VideoProcessorProxy (с буферизацией, буфер=" << bufferSize << " кадров)\n";
-    }
-    else {
-        processor = new VideoProcessor(zone, evidenceCollector, resolutionGenerator);
-        cout << " Видеопроцессор: VideoProcessor (без буферизации)\n";
-    }
-
-    // Определение типа сборщика доказательств
-    EvidenceCollectorProxy* ecProxy = dynamic_cast<EvidenceCollectorProxy*>(evidenceCollector);
-    if (ecProxy != nullptr) {
-        cout << " Сборщик доказательств: EvidenceCollectorProxy\n";
-        cout << "  - Минимальное качество: " << ecProxy->getMinQuality() << "/10\n";
-        cout << "  - Кадров до нарушения: " << ecProxy->getFramesBefore() << "\n";
-        cout << "  - Кадров после нарушения: " << ecProxy->getFramesAfter() << "\n";
-    }
-    else {
-        cout << "Сборщик доказательств: EvidenceCollector (без проверок качества)\n";
-    }
-
-    // Определение типа генератора постановлений
-    ResolutionProxy* rpProxy = dynamic_cast<ResolutionProxy*>(resolutionGenerator);
-    if (rpProxy != nullptr) {
-        cout << "Генератор постановлений: ResolutionProxy\n";
-        cout << "  - Требование метаданных: " << (rpProxy->getRequireMetadata() ? "да" : "нет") << "\n";
-        cout << "  - Минимальная уверенность номера: " << rpProxy->getMinConfidence() << "/10\n";
-        cout << "  - Автозапрос недостающих данных: " << (rpProxy->getAutoRequest() ? "да" : "нет") << "\n";
-    }
-    else {
-        cout << "Генератор постановлений: ResolutionGenerator (без дополнительных проверок)\n";
-    }
-
-    Camera* camera = new Camera();
-
-    // Заполнение буфера кадрами (если используется прокси)
-    if (useProxy && bufferSize > 0 && processorProxy != nullptr) {
-        cout << "\nЗАПОЛНЕНИЕ БУФЕРА\n";
-        for (int i = 0; i < bufferSize; i++) {
-            Frame* f = camera->getFrame();
-            processorProxy->addToBuffer(f);
-        }
-        cout << "Буфер заполнен, текущий размер: " << processorProxy->getBufferSize() << " / " << bufferSize << " кадров\n";
-    }
-
-    cout << "\nТЕСТИРОВАНИЕ НАРУШЕНИЙ\n";
-
-    // Получение всех кадров из буфера для анализа
-    vector<Frame*> allFrames;
-    if (processorProxy != nullptr) {
-        allFrames = processorProxy->getAllFrames();
-        cout << "Получено " << allFrames.size() << " кадров из буфера для анализа\n";
-    }
-
-    // ТЕСТ 1: Превышение скорости с высоким качеством кадра
-    testCar->speed = 95;
-    cout << "\n ТЕСТ 1: Превышение скорости (" << testCar->speed << " км/ч) - высокое качество кадра (9/10)\n";
-    processor->processFrameWithFrames(testCar, 9, 10, allFrames);
-
-    // ТЕСТ 2: Превышение скорости с низким качеством кадра
-    testCar->speed = 82;
-    cout << "\n ТЕСТ 2: Превышение скорости (" << testCar->speed << " км/ч) - низкое качество кадра (3/10)\n";
-    processor->processFrameWithFrames(testCar, 3, 10, allFrames);
-
-    // ТЕСТ 3: Автобус на выделенной полосе (не должен фиксироваться как нарушитель)
-    Vehicle* bus = new Bus("BUS_001");
-    bus->speed = 55;
-    bus->lane = 1;
-    bus->plate = new LicensePlate("B456CM", "154");
-    cout << "\n▶ ТЕСТ 3: Автобус на выделенной полосе (полоса 1) - не должно быть нарушения\n";
-    processor->processFrameWithFrames(bus, 9, 10, allFrames);
-
-    // Очистка памяти
-    delete bus;
-    delete processor;
-    delete camera;
-}
-
 int main() {
-    // Настройка локали для вывода русских символов
     setlocale(LC_ALL, "rus");
     srand(time(nullptr));
 
-    cout << "============================================================" << endl;
     cout << "СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ ПДД" << endl;
-    cout << "ДЕМОНСТРАЦИЯ РАБОТЫ ПРОКСИ В ТРЕХ КОНФИГУРАЦИЯХ" << endl;
-    cout << "============================================================" << endl;
-
-    cout << "\n--- ОБЩАЯ СХЕМА РАБОТЫ ПРОКСИ ---\n";
-    cout << "1. VideoProcessorProxy (Фильтрующий прокси) - наследник VideoProcessor\n";
-    cout << "Добавляет буферизацию кадров\n";
-    cout << "Позволяет получить кадры ДО момента нарушения\n\n";
-
-    cout << "2. EvidenceCollectorProxy (Защитный прокси) - наследник EvidenceCollector\n";
-    cout << "Проверяет качество кадров (четкость, освещенность)\n";
-    cout << "Проверяет наличие кадров до и после нарушения\n";
-    cout << "Отсеивает бракованные материалы\n\n";
-
-    cout << "3. ResolutionProxy (Защитный прокси) - наследник ResolutionGenerator\n";
-    cout << "Проверяет полноту доказательств\n";
-    cout << "Проверяет уверенность распознавания номера\n";
-    cout << "Выполняет финальную проверку перед выпиской штрафа\n";
+    cout << "ДЕМОНСТРАЦИЯ ТРЕХ КОНФИГУРАЦИЙ" << endl;
 
     // ========================================
-    // КОНФИГУРАЦИЯ 1: Перекресток в центре города (строгие требования)
+    // КОНФИГУРАЦИЯ 1: БАЗОВАЯ (без паттернов)
     // ========================================
+    cout << "КОНФИГУРАЦИЯ 1: БАЗОВАЯ" << endl;
+    cout << "Минимальная конфигурация: только скорость, без прокси, без декораторов" << endl;
+    cout << string(70, '=') << endl;
+
+    // Создание зоны контроля с базовым правилом
     ControlZone* zone1 = new ControlZone();
-    zone1->addRule(new SpeedRule(60));      // контроль скорости
-    zone1->addRule(new TrafficLightRule()); // контроль светофора
-    zone1->addRule(new LineCrossRule());    // контроль стоп-линии
-    zone1->addRule(new BusLaneRule(1));     // контроль выделенной полосы
+    zone1->addRule(new SpeedRule(60));
 
-    // переменные имеют тип БАЗОВОГО КЛАССА
-    EvidenceCollector* evidence1 = new EvidenceCollectorProxy(9, 3, 3);      // качество 9, 3 до, 3 после
-    ResolutionGenerator* resolution1 = new ResolutionProxy(true, 9, false);  // метаданные да, уверенность 9, автозапрос нет
+    // Базовые компоненты без паттернов
+    EvidenceCollector* collector1 = new EvidenceCollector();
+    ResolutionGenerator* generator1 = new ResolutionGenerator();
+    VideoProcessor* processor1 = new VideoProcessor(zone1, collector1, generator1);
+    Camera* camera1 = new Camera();
 
-    Vehicle* testCar1 = createTestCar("CAR_001", 75, 1, "PassengerCar");
+    Vehicle* car1 = createTestCar("CAR_001", 75, 1, "PassengerCar");
 
-    demonstrateConfig("ПЕРЕКРЕСТОК В ЦЕНТРЕ ГОРОДА (строгие требования)",
-        zone1, evidence1, resolution1, 300, testCar1, true);
+    vector<Frame*> frames1;
+    for (int i = 0; i < 3; i++) {
+        frames1.push_back(camera1->getFrame());
+    }
 
-    delete testCar1;
+    processor1->processFrameWithFrames(car1, 9, 10, frames1);
+
+    // Очистка конфигурации 1
+    for (auto f : frames1) delete f;
+    delete car1;
+    delete processor1;
+    delete generator1;
+    delete collector1;
+    delete camera1;
+    delete zone1;
 
     // ========================================
-    // КОНФИГУРАЦИЯ 2: Загородная трасса (сниженные требования)
+    // КОНФИГУРАЦИЯ 2: СТАНДАРТНАЯ (Proxy + Adapter + Decorator)
     // ========================================
+    cout << "КОНФИГУРАЦИЯ 2: СТАНДАРТНАЯ" << endl;
+    cout << "Proxy + Adapter + Decorator: буферизация, проверка качества, адаптер лазера" << endl;
+    cout << string(70, '=') << endl;
+
+    // Зона контроля с полным набором правил
     ControlZone* zone2 = new ControlZone();
-    zone2->addRule(new SpeedRule(90));      // только контроль скорости
+    zone2->addRule(new SpeedRule(60));
+    zone2->addRule(new TrafficLightRule());
+    zone2->addRule(new LineCrossRule());
+    zone2->addRule(new BusLaneRule(1));
 
-    EvidenceCollector* evidence2 = new EvidenceCollectorProxy(7, 2, 1);   // качество 7, 2 до, 1 после
-    ResolutionGenerator* resolution2 = new ResolutionProxy(false, 7, false); // метаданные нет, уверенность 7
+    // ДЕМОНСТРАЦИЯ ADAPTER: LaserAdapter
+    cout << "\nAdapter: LaserAdapter" << endl;
+    LaserSensor* laser = new LaserSensor();
+    LaserAdapter* laserAdapter = new LaserAdapter(laser);
+    cout << "  Лазерный измеритель: " << laser->getSpeedMph() << " миль/ч" << endl;
+    cout << "  После адаптации (миль/ч - км/ч): " << laserAdapter->getSpeedKmh() << " км/ч" << endl;
+    delete laserAdapter;
+    delete laser;
 
-    Vehicle* testCar2 = createTestCar("CAR_002", 105, 1, "PassengerCar");
+    // ДЕМОНСТРАЦИЯ ADAPTER: RadarSensor
+    cout << "\nAdapter: RadarSensor" << endl;
+    RadarSensor* radar = new RadarSensor();
+    RadarAdapter* radarAdapter = new RadarAdapter(radar);
+    cout << "  Лазерный измеритель: " << radar->getSpeedMps() << " миль/ч" << endl;
+    cout << "  После адаптации (м/с - км/ч): " << radarAdapter->getSpeedKmh() << " км/ч" << endl;
+    delete radarAdapter;
+    delete radar;
 
-    demonstrateConfig("ЗАГОРОДНАЯ ТРАССА (сниженные требования)",
-        zone2, evidence2, resolution2, 450, testCar2, true);
+    // Proxy компоненты
+    cout << "\nProxy компоненты" << endl;
+    EvidenceCollector* collector2 = new EvidenceCollectorProxy(8, 2, 1);
+    ResolutionGenerator* generator2 = new ResolutionProxy(true, 8, false);
+    VideoProcessor* processor2 = new VideoProcessorProxy(zone2, collector2, generator2, 300);
+    Camera* camera2 = new Camera();
 
-    delete testCar2;
+    Vehicle* car2 = createTestCar("CAR_002", 82, 1, "PassengerCar");
+
+    vector<Frame*> frames2;
+    for (int i = 0; i < 10; i++) {
+        frames2.push_back(camera2->getFrame());
+    }
+    // ДЕМОНСТРАЦИЯ DECORATOR: DescriptionViolation
+    cout << "\nDecorator: DescriptionViolation" << endl;
+    SpeedViolation* baseViolation = new SpeedViolation(car2, 82, 60);
+    Violation* decoratedViolation = new DescriptionViolation(baseViolation, "камера 002");
+    cout << "  Базовое нарушение: " << baseViolation->getDescription() << endl;
+    cout << "  Декорированное (с комментарием): " << decoratedViolation->getDescription() << endl;
+    delete decoratedViolation;
+
+    // Обработка
+    processor2->processFrameWithFrames(car2, 9, 10, frames2);
+
+    // Очистка конфигурации 2
+    for (auto f : frames2) delete f;
+    delete car2;
+    delete processor2;
+    delete generator2;
+    delete collector2;
+    delete camera2;
+    delete zone2;
 
     // ========================================
-    // КОНФИГУРАЦИЯ 3: Выделенная полоса в часы пик (средние требования)
+// КОНФИГУРАЦИЯ 3: МАКСИМАЛЬНАЯ (Composite + Adapter + Decorator + Iterator + Proxy)
+// ========================================
+    cout << "КОНФИГУРАЦИЯ 3: МАКСИМАЛЬНАЯ" << endl;
+    cout << "Composite + Adapter + Decorator + Iterator + Proxy" << endl;
+    cout << string(70, '=') << endl;
+
+    // 1. COMPOSITE: CompositeFrameBuffer (объединение трех камер)
+    cout << "\n 1. Composite: CompositeFrameBuffer" << endl;
+
+    // Создаем три камеры
+    Camera* camA = new Camera();
+    Camera* camB = new Camera();
+    Camera* camC = new Camera();
+
+    // Создаем буферы для каждой камеры
+    SimpleFrameBuffer* bufA = new SimpleFrameBuffer(300);
+    SimpleFrameBuffer* bufB = new SimpleFrameBuffer(300);
+    SimpleFrameBuffer* bufC = new SimpleFrameBuffer(300);
+
+    // Заполняем буферы кадрами
+    for (int i = 0; i < 50; i++) {
+        Frame* fA = camA->getFrame();
+        Frame* fB = camB->getFrame();
+        Frame* fC = camC->getFrame();
+        bufA->addFrame(fA);
+        bufB->addFrame(fB);
+        bufC->addFrame(fC);
+    }
+
+    // СОЗДАЕМ КОМПОЗИТНЫЙ БУФЕР (объединяет все три буфера)
+    CompositeFrameBuffer* compositeBuffer = new CompositeFrameBuffer();
+    compositeBuffer->addBuffer(bufA);
+    compositeBuffer->addBuffer(bufB);
+    compositeBuffer->addBuffer(bufC);
+
+    cout << "  Камера A: " << bufA->getSize() << " кадров" << endl;
+    cout << "  Камера B: " << bufB->getSize() << " кадров" << endl;
+    cout << "  Камера C: " << bufC->getSize() << " кадров" << endl;
+    cout << "  Композитный буфер (объединение): " << compositeBuffer->getSize() << " кадров" << endl;
+    cout << "  Видеопроцессор работает с композитом как с единым буфером" << endl;
+
+    // 2. ADAPTER: RadarAdapter и LaserAdapter
+    cout << "\n2. Adapter: RadarAdapter и LaserAdapter" << endl;
+
+    RadarSensor* radar2 = new RadarSensor();
+    RadarAdapter* radarAdapter2 = new RadarAdapter(radar2);
+    cout << "  Радарный датчик: " << radar2->getSpeedMps() << " м/с → "
+        << radarAdapter2->getSpeedKmh() << " км/ч" << endl;
+
+    LaserSensor* laser2 = new LaserSensor();
+    LaserAdapter* laserAdapter2 = new LaserAdapter(laser2);
+    cout << "  Лазерный измеритель: " << laser2->getSpeedMph() << " миль/ч → "
+        << laserAdapter2->getSpeedKmh() << " км/ч" << endl;
+
+    delete radarAdapter2;
+    delete radar2;
+    delete laserAdapter2;
+    delete laser2;
+
+    // ========================================
+    // 3. Зона контроля с полным набором правил
     // ========================================
     ControlZone* zone3 = new ControlZone();
-    zone3->addRule(new SpeedRule(60));      // контроль скорости
-    zone3->addRule(new BusLaneRule(1));     // контроль выделенной полосы
-
-    EvidenceCollector* evidence3 = new EvidenceCollectorProxy(8, 2, 1);   // качество 8, 2 до, 1 после
-    ResolutionGenerator* resolution3 = new ResolutionProxy(true, 8, true); // метаданные да, уверенность 8, автозапрос да
-
-    Vehicle* testCar3 = createTestCar("CAR_003", 70, 1, "PassengerCar");
-
-    demonstrateConfig("ВЫДЕЛЕННАЯ ПОЛОСА В ЧАСЫ ПИК (средние требования)",
-        zone3, evidence3, resolution3, 150, testCar3, true);
-
-    delete testCar3;
+    zone3->addRule(new SpeedRule(60));
+    zone3->addRule(new TrafficLightRule());
+    zone3->addRule(new LineCrossRule());
+    zone3->addRule(new BusLaneRule(1));
 
     // ========================================
-    // КОНФИГУРАЦИЯ 4: Минимальная нагрузка (без прокси)
+    // 4. Proxy для доказательств и постановлений
     // ========================================
-    ControlZone* zone4 = new ControlZone();
-    zone4->addRule(new SpeedRule(60));      // только контроль скорости
+    cout << "\n3. Proxy: EvidenceCollectorProxy и ResolutionProxy ---" << endl;
+    EvidenceCollector* collector3 = new EvidenceCollectorProxy(9, 3, 3);
+    ResolutionGenerator* generator3 = new ResolutionProxy(true, 9, true);
+    VideoProcessor* processor3 = new VideoProcessorProxy(zone3, collector3, generator3, 300);
 
-    // Используем БАЗОВЫЕ КЛАССЫ без прокси
-    EvidenceCollector* evidence4 = new EvidenceCollector();           // без проверок качества
-    ResolutionGenerator* resolution4 = new ResolutionGenerator();     // без финальной проверки
+    // ========================================
+    // 5. DECORATOR: PriorityViolation и DescriptionViolation
+    // ========================================
+    cout << "\n4. Decorator: PriorityViolation и DescriptionViolation" << endl;
 
-    Vehicle* testCar4 = createTestCar("CAR_004", 85, 1, "PassengerCar");
+    Vehicle* car3 = createTestCar("CAR_003", 95, 1, "PassengerCar");
+    SpeedViolation* baseViolation2 = new SpeedViolation(car3, 95, 60);
 
-    demonstrateConfig("МИНИМАЛЬНАЯ НАГРУЗКА (без прокси)",
-        zone4, evidence4, resolution4, 0, testCar4, false);
+    // Комбинируем декораторы
+    Violation* decoratedViolation2 = new PriorityViolation(
+        new DescriptionViolation(baseViolation2, "камера 003, туман"));
 
-    delete testCar4;
+    cout << "  Базовое нарушение: " << baseViolation2->getDescription() << endl;
+    cout << "  Декорированное: " << decoratedViolation2->getDescription() << endl;
+    delete decoratedViolation2;
 
-    // Очистка памяти
-    delete zone1;
-    delete evidence1;
-    delete resolution1;
+    // ========================================
+    // 6. Обработка нарушения с использованием композитного буфера
+    // ========================================
+    cout << "\n 5. Обработка нарушения с композитным буфером" << endl;
+    vector<Frame*> allFrames = compositeBuffer->getFrames();
+    cout << "  Получено " << allFrames.size() << " кадров из композитного буфера" << endl;
+    processor3->processFrameWithFrames(car3, 9, 10, allFrames);
 
-    delete zone2;
-    delete evidence2;
-    delete resolution2;
+    // 7. ITERATOR: FrameIterator для обхода кадров
+    cout << "\n6. Iterator: FrameIterator для обхода кадров в доказательствах" << endl;
 
+    Evidence* evidence = new Evidence("DEMO_EVID");
+    for (int i = 0; i < 5; i++) {
+        evidence->addFrame(new Frame(1000 + i * 100));
+    }
+
+    cout << "  Доказательства: " << evidence->id << ", кадров: " << evidence->frames.size() << endl;
+    cout << "  Обход кадров через итератор:" << endl;
+
+    for (FrameIterator it = evidence->begin(); it != evidence->end(); ++it) {
+        Frame* f = *it;
+        cout << "    Кадр: время " << f->timestamp << endl;
+    }
+
+    // ОЧИСТКА КОНФИГУРАЦИИ 3
+    delete evidence;
+    delete car3;
+    delete processor3;
+    delete generator3;
+    delete collector3;
+    delete compositeBuffer;  // CompositeBuffer удаляет bufA, bufB, bufC
+    delete camA;
+    delete camB;
+    delete camC;
     delete zone3;
-    delete evidence3;
-    delete resolution3;
 
-    delete zone4;
-    delete evidence4;
-    delete resolution4;
+    // ИТОГ ДЕМОНСТРАЦИИ
+    cout << "ИТОГ ДЕМОНСТРАЦИИ" << endl;
+    cout << string(70, '=') << endl;
 
-    cout << "\nРАБОТА ЗАВЕРШЕНА" << endl;
+    cout << "\nКонфигурация 1 (БАЗОВАЯ): без паттернов" << endl;
+    cout << "  - Только контроль скорости, без буферизации, без проверки качества" << endl;
+
+    cout << "\nКонфигурация 2 (СТАНДАРТНАЯ): Adapter + Decorator + Proxy" << endl;
+    cout << "  - Adapter (RadarAdapter, LaserAdapter): радарный и лазерный датчики" << endl;
+    cout << "  - Decorator (DescriptionViolation): добавление комментариев к нарушениям" << endl;
+    cout << "  - Proxy (VideoProcessorProxy, EvidenceCollectorProxy, ResolutionProxy):" << endl;
+    cout << "    буферизация кадров (300 кадров)" << endl;
+    cout << "    проверка качества (порог 8, 2 кадра до, 1 после)" << endl;
+    cout << "    финальная верификация постановлений (метаданные, уверенность 8)" << endl;
+
+    cout << "\nКонфигурация 3 (МАКСИМАЛЬНАЯ): Composite + Adapter + Decorator + Iterator + Proxy" << endl;
+    cout << "  - Composite (CompositeFrameBuffer): объединение буферов трех камер в один" << endl;
+    cout << "  - Adapter (RadarAdapter, LaserAdapter): радарный и лазерный датчики" << endl;
+    cout << "  - Decorator (PriorityViolation, DescriptionViolation): пометка 'СРОЧНО!' и комментарии" << endl;
+    cout << "  - Iterator (FrameIterator): последовательный обход кадров в доказательствах" << endl;
+    cout << "  - Proxy: строгая проверка качества (9, 3/3), автозапрос данных" << endl;
+
+    cout << "ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА" << endl;
 
     return 0;
 }
