@@ -1,13 +1,15 @@
 #pragma once
 #include <string>
-#include "LicensePlate.h"
+using namespace std;
+
 class Vehicle {
 public:
-    std::string id;
+    string id;
     int speed;
     int lane;
-    LicensePlate* plate;
-    Vehicle(std::string i) : id(i), speed(0), lane(0), plate(nullptr) {}
-    virtual ~Vehicle() { delete plate; }
-    virtual std::string getType() { return "Vehicle"; }
+    string type;
+
+    Vehicle(const string& i, const string& t) : id(i), type(t), speed(0), lane(0) {}
+    virtual ~Vehicle() {}
+    string getType() const { return type; }
 };
