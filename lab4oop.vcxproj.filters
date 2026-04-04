@@ -209,7 +209,13 @@
     <ClInclude Include="TrafficMonitorFacade.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="ViolationExpert.h">
+    <ClInclude Include="IViolationExpert.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="StatisticsExpert.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="FineCalculatorExpert.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

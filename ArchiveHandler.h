@@ -12,7 +12,7 @@ public:
     ArchiveHandler(VideoSource* src) : VideoHandler(src) {}
 
     void process(Vehicle* v) override {
-        cout << "\n=== ÀÐÕÈÂÀÒÎÐ ===" << endl;
+        cout << "\nÀÐÕÈÂÀÒÎÐ" << endl;
         cout << "Èñòî÷íèê: " << source->getSourceName() << endl;
 
         Frame* frame = source->getNextFrame();

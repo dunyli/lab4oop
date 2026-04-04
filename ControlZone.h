@@ -1,7 +1,7 @@
 #pragma once
 #include "Rule.h"
 #include "Vehicle.h"
-#include "ViolationExpert.h"
+#include "IViolationExpert.h"
 #include <vector>
 #include <iostream>
 #include <ctime>
@@ -11,15 +11,15 @@ class ControlZone {
 private:
     string zoneId, zoneName;
     vector<Rule*> rules;
-    ViolationExpert* expert;
-    bool deleteViolations;  // флаг, нужно ли удалять нарушения
+    IViolationExpert* expert;  // теперь интерфейс
+    bool deleteViolations;
 
 public:
-    // Конструктор с экспертом (нарушения НЕ удаляем, эксперт сам удалит)
-    ControlZone(const string& id, const string& name, ViolationExpert* exp)
+    // Конструктор с экспертом (через интерфейс)
+    ControlZone(const string& id, const string& name, IViolationExpert* exp)
         : zoneId(id), zoneName(name), expert(exp), deleteViolations(false) {}
 
-    // Конструктор без эксперта (нарушения удаляем)
+    // Конструктор без эксперта
     ControlZone(const string& id, const string& name)
         : zoneId(id), zoneName(name), expert(nullptr), deleteViolations(true) {}
 
@@ -31,9 +31,7 @@ public:
             auto vio = r->check(v);
             if (vio) {
                 res.push_back(vio);
-                if (expert) {
-                    expert->addViolation(vio);  // эксперт теперь владеет нарушением
-                }
+                if (expert) expert->addViolation(vio);
             }
         }
         return res;
@@ -50,15 +48,8 @@ public:
         }
         else {
             for (auto vio : violations) {
-                cout << "  -> " << vio->getDescription() << endl;
-                if (expert && expert->calculateFineWithHistory(vio) > 0) {
-                    cout << "     Штраф с учётом истории: "
-                        << expert->calculateFineWithHistory(vio) << " руб." << endl;
-                }
-                // НЕ удаляем vio, если есть эксперт (эксперт сам удалит)
-                if (deleteViolations) {
-                    delete vio;
-                }
+                cout << "  - " << vio->getDescription() << endl;
+                if (deleteViolations) delete vio;
             }
         }
     }

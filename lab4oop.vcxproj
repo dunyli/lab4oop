@@ -180,6 +180,8 @@
     <ClInclude Include="EvidenceCollector.h" />
     <ClInclude Include="EvidenceCollectorProxy.h" />
     <ClInclude Include="FileSource.h" />
+    <ClInclude Include="FineCalculatorExpert.h" />
+    <ClInclude Include="IViolationExpert.h" />
     <ClInclude Include="RuleFactory.h" />
     <ClInclude Include="Frame.h" />
     <ClInclude Include="LicensePlate.h" />
@@ -195,6 +197,7 @@
     <ClInclude Include="Rule.h" />
     <ClInclude Include="SpeedRule.h" />
     <ClInclude Include="SpeedViolation.h" />
+    <ClInclude Include="StatisticsExpert.h" />
     <ClInclude Include="TrafficLightRule.h" />
     <ClInclude Include="TrafficMonitorFacade.h" />
     <ClInclude Include="Truck.h" />
@@ -204,7 +207,6 @@
     <ClInclude Include="VideoProcessorProxy.h" />
     <ClInclude Include="VideoSource.h" />
     <ClInclude Include="Violation.h" />
-    <ClInclude Include="ViolationExpert.h" />
     <ClInclude Include="ViolationHandler.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

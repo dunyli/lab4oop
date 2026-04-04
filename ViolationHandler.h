@@ -14,7 +14,7 @@ public:
         : VideoHandler(src), zone(z) {}
 
     void process(Vehicle* v) override {
-        cout << "\n=== ÎÁÐÀÁÎÒ×ÈÊ ÍÀÐÓØÅÍÈÉ ===" << endl;
+        cout << "\nÎÁÐÀÁÎÒ×ÈÊ ÍÀÐÓØÅÍÈÉ" << endl;
         cout << "Èñòî÷íèê: " << source->getSourceName() << endl;
 
         Frame* frame = source->getNextFrame();

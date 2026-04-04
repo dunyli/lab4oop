@@ -22,7 +22,7 @@ public:
         for (auto zone : zones) delete zone;
     }
 
-    // ===== СОЗДАНИЕ ЗОН (без эксперта) =====
+    // СОЗДАНИЕ ЗОН
 
     void createSpeedZone(const string& zoneId, const string& zoneName, int speedLimit) {
         // Используем конструктор без эксперта
@@ -42,7 +42,7 @@ public:
             << " км/ч и выделенной полосой " << laneNumber << endl;
     }
 
-    // ===== ПРОВЕРКА АВТОМОБИЛЯ =====
+    // ПРОВЕРКА АВТОМОБИЛЯ
 
     void checkVehicleInAllZones(Vehicle* v) {
         cout << "\n[Фасад] Проверка ТС " << v->id << " во всех зонах:" << endl;

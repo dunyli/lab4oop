@@ -3,7 +3,7 @@
 #include "Vehicle.h"
 #include "ControlZone.h"
 #include "RuleFactory.h"
-#include "ViolationExpert.h"
+#include "IViolationExpert.h"
 #include "Camera.h"
 #include "Frame.h"
 
@@ -17,6 +17,10 @@
 
 // ===== ПАТТЕРН FACADE =====
 #include "TrafficMonitorFacade.h"
+
+// ===== ДВА ЭКСПЕРТА =====
+#include "StatisticsExpert.h"
+#include "FineCalculatorExpert.h"
 
 using namespace std;
 
@@ -163,18 +167,23 @@ int main() {
     cout << "Назначение: сбор статистики, учёт истории нарушений" << endl;
     cout << "Применённые паттерны: Flyweight, Information Expert" << endl;
 
-    // Создаём эксперта (информационный центр)
-    ViolationExpert expert;
+    // ===== ИСПОЛЬЗОВАНИЕ ДВУХ ЭКСПЕРТОВ =====
 
-    // Создаём зоны с передачей эксперта (deleteViolations = false)
-    ControlZone expertZone1("Z006", "Аналитическая зона 1", &expert);
-    ControlZone expertZone2("Z007", "Аналитическая зона 2", &expert);
+    // ЭКСПЕРТ 1: ДЛЯ СБОРА СТАТИСТИКИ
+    StatisticsExpert statExpert;
 
-    expertZone1.addRule(factory.getSpeedRule(60, "Аналитическая зона 1"));
-    expertZone1.addRule(factory.getBusLaneRule(1, "Аналитическая зона 1"));
-    expertZone2.addRule(factory.getSpeedRule(40, "Аналитическая зона 2"));
+    // ЭКСПЕРТ 2: ДЛЯ РАСЧЁТА ШТРАФОВ
+    FineCalculatorExpert fineExpert;
 
-    // Проверяем автомобили (нарушения автоматически попадают к эксперту)
+    // Создаём зоны с разными экспертами
+    ControlZone statZone("Z006", "Статистическая зона", &statExpert);
+    ControlZone fineZone("Z007", "Штрафная зона", &fineExpert);
+
+    statZone.addRule(factory.getSpeedRule(60, "Статистическая зона"));
+    statZone.addRule(factory.getBusLaneRule(1, "Статистическая зона"));
+    fineZone.addRule(factory.getSpeedRule(40, "Штрафная зона"));
+
+    // Проверяем автомобили (нарушения попадают к разным экспертам)
     Vehicle car5("X999XX", "PassengerCar");
     car5.speed = 75;
     car5.lane = 1;
@@ -183,38 +192,28 @@ int main() {
     car6.speed = 82;
     car6.lane = 1;
 
-    Vehicle car7("X999XX", "PassengerCar");  // ТРЕТЬЕ нарушение
-    car7.speed = 70;
-    car7.lane = 1;
+    Vehicle car7("Y777YY", "PassengerCar");
+    car7.speed = 45;
+    car7.lane = 2;
 
-    Vehicle car8("Y777YY", "PassengerCar");
-    car8.speed = 45;
-    car8.lane = 2;
+    cout << "\nПроверка автомобилей (с передачей нарушений разным экспертам)" << endl;
+    statZone.printCheck(&car5);   // идёт в StatisticsExpert
+    statZone.printCheck(&car6);   // идёт в StatisticsExpert
+    fineZone.printCheck(&car7);   // идёт в FineCalculatorExpert
 
-    cout << "\nПроверка автомобилей (с передачей нарушений эксперту)" << endl;
-    expertZone1.printCheck(&car5);   // 1-е нарушение
-    expertZone1.printCheck(&car6);   // 2-е нарушение (штраф +20%)
-    expertZone1.printCheck(&car7);   // 3-е нарушение (штраф +50%)
-    expertZone2.printCheck(&car8);   // нарушение в другой зоне
+    // Получение информации от каждого эксперта
+    cout << "\n=== ИНФОРМАЦИЯ ОТ ЭКСПЕРТА СТАТИСТИКИ ===" << endl;
+    cout << statExpert.getInfo() << endl;
 
-    // Получение статистики от эксперта
-    cout << "\nСтатистика от эксперта" << endl;
-    expert.printStats();
-
-    // Детальный отчёт по автомобилю
-    cout << expert.getVehicleReport("X999XX") << endl;
+    cout << "\n=== ИНФОРМАЦИЯ ОТ ЭКСПЕРТА ШТРАФОВ ===" << endl;
+    cout << fineExpert.getInfo() << endl;
 
 
     // СЦЕНАРИЙ 5: КОНФИГУРАЦИЯ «ПОЛНАЯ» (ВСЕ ПАТТЕРНЫ ВМЕСТЕ)
-    // Цель: максимальная функциональность
 
-    cout << "\n==============================================================" << endl;
-    cout << "СЦЕНАРИЙ 5: ПОЛНАЯ КОНФИГУРАЦИЯ (Все паттерны вместе)" << endl;
-    cout << "Назначение: максимальная функциональность для крупных городов" << endl;
-    cout << "Применённые паттерны: Flyweight + Bridge + Facade + Information Expert" << endl;
-
-    // Создаём все компоненты
-    ViolationExpert fullExpert;
+   // Создаём все компоненты (используем конкретные классы)
+    StatisticsExpert fullStatExpert;
+    FineCalculatorExpert fullFineExpert;
     RuleFactory fullFactory;
     Camera fullCamera;
 
@@ -225,41 +224,59 @@ int main() {
     fullFacade.createSpeedZone("Z008", "Полная зона 1", 60);
     fullFacade.createBusLaneZone("Z009", "Полная зона 2", 1, 60);
 
-    // Создаём дополнительные зоны напрямую с экспертом
-    ControlZone fullZone("Z010", "Полная зона 3", &fullExpert);
-    fullZone.addRule(fullFactory.getSpeedRule(40, "Полная зона 3"));
+    // Создаём дополнительные зоны напрямую с экспертами
+    ControlZone fullZoneStat("Z010", "Полная зона статистики", &fullStatExpert);
+    fullZoneStat.addRule(fullFactory.getSpeedRule(40, "Полная зона статистики"));
+
+    ControlZone fullZoneFine("Z011", "Полная зона штрафов", &fullFineExpert);
+    fullZoneFine.addRule(fullFactory.getSpeedRule(50, "Полная зона штрафов"));
 
     // Создаём Bridge компоненты
     CameraSource fullCamSource("FULL_CAM", &fullCamera);
-    ViolationHandler fullHandler(&fullCamSource, &fullZone);
+    ViolationHandler fullHandlerStat(&fullCamSource, &fullZoneStat);
+    ViolationHandler fullHandlerFine(&fullCamSource, &fullZoneFine);
 
     // Проверяем автомобили
     Vehicle fullCar1("MASTER_01", "PassengerCar");
     fullCar1.speed = 78;
     fullCar1.lane = 1;
 
-    Vehicle fullCar2("MASTER_01", "PassengerCar");  // повторное нарушение
+    Vehicle fullCar2("MASTER_01", "PassengerCar");
     fullCar2.speed = 85;
     fullCar2.lane = 1;
 
-    cout << "\nПроверка через Bridge с экспертом" << endl;
-    fullHandler.process(&fullCar1);
-    fullHandler.process(&fullCar2);
+    Vehicle fullCar3("SLAVE_01", "PassengerCar");
+    fullCar3.speed = 55;
+    fullCar3.lane = 2;
+
+    cout << "\nПроверка через Bridge с экспертом статистики" << endl;
+    fullHandlerStat.process(&fullCar1);
+    fullHandlerStat.process(&fullCar2);
+
+    cout << "\nПроверка через Bridge с экспертом штрафов" << endl;
+    fullHandlerFine.process(&fullCar3);
 
     cout << "\nПроверка через фасад" << endl;
     fullFacade.checkVehicleInAllZones(&fullCar1);
 
-    // Полная статистика от эксперта
-    cout << "\nПолная статистика" << endl;
-    fullExpert.printStats();
+    // Полная статистика от экспертов
+    cout << "\nСтатистика от эксперта StatisticsExpert" << endl;
+    cout << fullStatExpert.getInfo() << endl;
+
+    cout << "\nСтатистика от эксперта FineCalculatorExpert" << endl;
+    cout << fullFineExpert.getInfo() << endl;
 
     // ИТОГОВАЯ СВОДКА
 
+    cout << "\n==============================================================" << endl;
     cout << "ПРЕИМУЩЕСТВА ПАТТЕРНОВ" << endl;
+    cout << "==============================================================" << endl;
     cout << "1. Flyweight: экономия памяти (1 объект SpeedRule на 100 зон)" << endl;
     cout << "2. Bridge: гибкая подмена источников и обработчиков видео" << endl;
     cout << "3. Facade: простой интерфейс для клиента" << endl;
     cout << "4. Information Expert: централизованная статистика и учёт истории" << endl;
+    cout << "   - StatisticsExpert: сбор статистики по зонам и нарушителям" << endl;
+    cout << "   - FineCalculatorExpert: расчёт штрафов с учётом истории" << endl;
 
     cout << "РАБОТА ЗАВЕРШЕНА" << endl;
 
