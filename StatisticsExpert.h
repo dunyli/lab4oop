@@ -33,7 +33,7 @@ public:
 
     // Главный метод: вывод статистики
     string getInfo() override {
-        string result = "\n=== СТАТИСТИКА ===\n";
+        string result = "\nСТАТИСТИКА\n";
         result += "Всего нарушений: " + to_string(allViolations.size()) + "\n";
 
         result += "\nПо зонам:\n";

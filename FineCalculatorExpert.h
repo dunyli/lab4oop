@@ -28,7 +28,7 @@ public:
 
     // ֳכאגםûי לועמה: נאסק¸ע רענאפא ס ףק¸עמל טסעמנטט
     string getInfo() override {
-        string result = "\n=== ׀ְׁ׳¨ׂ ״ׂ׀ְװ־ֲ ׁ ׃׳¨ׂ־ּ ָׁׂ־׀ָָ ===\n";
+        string result = "\n׀ְׁ׳¨ׂ ״ׂ׀ְװ־ֲ ׁ ׃׳¨ׂ־ּ ָׁׂ־׀ָָ \n";
 
         for (auto& p : violationCountByVehicle) {
             int count = p.second;
