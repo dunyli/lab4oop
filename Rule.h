@@ -1,5 +1,6 @@
 #pragma once
 #include "Violation.h"
+
 class Rule {
 public:
     virtual ~Rule() {}

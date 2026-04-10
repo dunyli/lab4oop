@@ -1,23 +1,31 @@
-﻿// EvidenceCollector.cpp
-#include "EvidenceCollector.h"
+﻿#include "EvidenceCollector.h"
 #include "Evidence.h"
+#include "Frame.h"         
+#include "Violation.h"      
 #include <iostream>
 #include <ctime>
 #include <string>
+#include <vector>           
 
 using namespace std;
 
 Evidence* EvidenceCollector::collect(Violation* v, vector<Frame*>& frames, int quality, long violationTime) {
+    // Генерация уникального идентификатора для доказательств
     string evidId = "EVID_" + to_string(time(nullptr));
-    Evidence* e = new Evidence(evidId);
+    Evidence* evidence = new Evidence(evidId);
 
-    // ВАЖНО: НЕ сохраняем указатели на кадры, а создаем копии
-    // или просто не сохраняем их для демонстрации
-    for (auto f : frames) {
-        // Создаем копию кадра, чтобы не зависеть от оригиналов
-        Frame* copy = new Frame(f->timestamp);
-        e->addFrame(copy);
+    // Создание копий кадров для независимого хранения доказательств
+    // Это гарантирует, что оригинальные кадры могут быть удалены или изменены 
+    // без потери доказательной базы
+    for (auto frame : frames) {
+        if (frame != nullptr) {  // ← ДОБАВИТЬ! Проверка на nullptr
+            Frame* frameCopy = new Frame(frame->timestamp);
+            evidence->addFrame(frameCopy);
+        }
     }
 
-    return e;
+    cout << "  [EvidenceCollector] Собрано доказательство " << evidId
+        << " с " << frames.size() << " кадрами" << endl;
+
+    return evidence;
 }

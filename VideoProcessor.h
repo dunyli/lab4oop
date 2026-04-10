@@ -2,10 +2,6 @@
 #include "ControlZone.h"
 #include "EvidenceCollector.h"
 #include "ResolutionGenerator.h"
-#include "Frame.h"
-#include "Vehicle.h"
-#include "Resolution.h"
-#include "Evidence.h"
 #include <vector>
 
 using namespace std;
@@ -17,12 +13,18 @@ protected:
     ResolutionGenerator* resolutionGenerator;
 
 public:
-    VideoProcessor(ControlZone* z, EvidenceCollector* ec, ResolutionGenerator* rg);
+    VideoProcessor(ControlZone* controlZone, EvidenceCollector* collector, ResolutionGenerator* generator);
     virtual ~VideoProcessor();
 
-    virtual void processFrame(Frame* frame, Vehicle* v, int quality, int confidence = 10);
-    virtual void processFrameWithFrames(Vehicle* v, int quality, int confidence, vector<Frame*>& frames);
+    // Существующие методы
+    virtual void processFrame(Frame* currentFrame, Vehicle* vehicle, int frameQuality, int ocrConfidence = 10);
+    virtual void processFrameWithFrames(Vehicle* vehicle, int frameQuality, int ocrConfidence,
+        vector<Frame*>& preCapturedFrames);
 
+    // НОВЫЙ МЕТОД processVehicle
+    virtual void processVehicle(Vehicle* vehicle, int frameQuality, int ocrConfidence, vector<Frame*>& frames);
+
+    // Геттеры
     ControlZone* getZone() const { return zone; }
     EvidenceCollector* getEvidenceCollector() const { return evidenceCollector; }
     ResolutionGenerator* getResolutionGenerator() const { return resolutionGenerator; }

@@ -6,27 +6,37 @@
 
 using namespace std;
 
-EvidenceCollectorProxy::EvidenceCollectorProxy(int q, int before, int after)
-    : minQuality(q), framesBefore(before), framesAfter(after) {
-    cout << "[EvidenceCollectorProxy] Создан: качество=" << q
-        << ", кадров до=" << before << ", после=" << after << endl;
+EvidenceCollectorProxy::EvidenceCollectorProxy(int qualityThreshold, int framesBeforeCount, int framesAfterCount)
+    : minQuality(qualityThreshold), framesBefore(framesBeforeCount), framesAfter(framesAfterCount) {
+    cout << "[EvidenceCollectorProxy] Инициализирован защитный прокси: "
+        << "минимальное качество=" << qualityThreshold
+        << ", кадров до нарушения=" << framesBeforeCount
+        << ", кадров после нарушения=" << framesAfterCount << endl;
 }
 
-Evidence* EvidenceCollectorProxy::collect(Violation* v, vector<Frame*>& frames, int quality, long violationTime) {
-    cout << "  [EvidenceCollectorProxy] Качество: " << quality << " (нужно " << minQuality
-        << "), Кадров: " << frames.size() << " (нужно " << framesBefore << " до, "
-        << framesAfter << " после)" << endl;
+Evidence* EvidenceCollectorProxy::collect(Violation* violation, vector<Frame*>& frames, int quality, long violationTime) {
+    cout << "  [EvidenceCollectorProxy] Входная проверка: качество кадров=" << quality
+        << " (требуется >= " << minQuality << "), "
+        << "количество кадров=" << frames.size()
+        << " (требуется минимум " << (framesBefore + framesAfter + 1) << ")" << endl;
 
+    // Проверка качества изображения (четкость, освещенность)
     if (quality < minQuality) {
-        cout << "  [EvidenceCollectorProxy] Качество слишком низкое - ОТКЛОНЕНО" << endl;
+        cout << "  [EvidenceCollectorProxy] ОТКЛОНЕНО: качество кадров недостаточно ("
+            << quality << " < " << minQuality << ")" << endl;
         return nullptr;
     }
 
-    if (frames.size() < framesBefore + framesAfter + 1) {
-        cout << "  [EvidenceCollectorProxy] Недостаточно кадров - ОТКЛОНЕНО" << endl;
+    // Проверка полноты набора кадров (до и после нарушения)
+    int requiredFrames = framesBefore + framesAfter + 1;
+    if ((int)frames.size() < requiredFrames) {
+        cout << "  [EvidenceCollectorProxy] ОТКЛОНЕНО: недостаточно кадров для доказательств ("
+            << frames.size() << " < " << requiredFrames << ")" << endl;
         return nullptr;
     }
 
-    cout << "  [EvidenceCollectorProxy] Проверка пройдена - вызов базового метода" << endl;
-    return EvidenceCollector::collect(v, frames, quality, violationTime);
+    cout << "  [EvidenceCollectorProxy] ОДОБРЕНО: все проверки качества пройдены" << endl;
+
+    // Делегирование создания доказательств базовому сборщику
+    return EvidenceCollector::collect(violation, frames, quality, violationTime);
 }

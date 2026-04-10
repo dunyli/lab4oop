@@ -10,8 +10,10 @@ private:
     bool autoRequest;
 
 public:
-    ResolutionProxy(bool meta, int conf = 9, bool autoReq = false);
-    Resolution* generate(Evidence* e, int speed, int confidence = 10) override;
+    // Конструктор с 3 параметрами
+    ResolutionProxy(bool requireMetadataCheck, int minConfidenceLevel, bool enableAutoRequest);
+
+    Resolution* generate(Evidence* evidence, int vehicleSpeed, int recognitionConfidence = 10) override;
 
     // Геттеры
     bool getRequireMetadata() const { return requireMetadata; }

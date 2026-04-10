@@ -1,18 +1,23 @@
 #pragma once
 #include <string>
 #include <iostream>
-
+#include <ctime>
 using namespace std;
 
-// Класс данных - постановление о штрафе
 class Resolution {
-public:
+private:
     string id;
     int amount;
+    string status;
 
-    Resolution(string i, int a) : id(i), amount(a) {}
+public:
+    Resolution(string i, int a) : id(i), amount(a), status("issued") {}
 
     void save() {
-        cout << "  [Resolution] Сохранено постановление " << id << ", сумма: " << amount << " руб." << endl;
+        cout << "  [Resolution] Сохранено постановление " << id
+            << ", сумма: " << amount << " руб." << endl;
     }
+
+    string getId() const { return id; }
+    int getAmount() const { return amount; }
 };

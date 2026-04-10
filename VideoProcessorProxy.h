@@ -2,8 +2,6 @@
 #include <queue>
 #include <vector>
 #include "VideoProcessor.h"
-#include "Frame.h"
-#include "Vehicle.h"
 
 using namespace std;
 
@@ -13,14 +11,19 @@ private:
     int maxSize;
 
 public:
-    VideoProcessorProxy(ControlZone* z, EvidenceCollector* ec, ResolutionGenerator* rg, int bufferSize);
+    VideoProcessorProxy(ControlZone* controlZone, EvidenceCollector* collector,
+        ResolutionGenerator* generator, int ringBufferSize);
     ~VideoProcessorProxy();
 
-    void processFrame(Frame* frame, Vehicle* v, int quality, int confidence = 10) override;
-    void processFrameWithFrames(Vehicle* v, int quality, int confidence, vector<Frame*>& frames) override;
+    void processFrame(Frame* incomingFrame, Vehicle* vehicle, int frameQuality, int ocrConfidence = 10) override;
+    void processFrameWithFrames(Vehicle* vehicle, int frameQuality, int ocrConfidence,
+        vector<Frame*>& externalFrames) override;
+
+    // мнбши лернд processVehicle
+    void processVehicle(Vehicle* vehicle, int frameQuality, int ocrConfidence, vector<Frame*>& frames) override;
 
     vector<Frame*> getAllFrames();
     int getBufferSize() const;
     void clearBuffer();
-    void addToBuffer(Frame* frame);
+    void addToBuffer(Frame* newFrame);
 };

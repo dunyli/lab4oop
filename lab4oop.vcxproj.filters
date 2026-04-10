@@ -185,40 +185,40 @@
     <ClInclude Include="ResolutionGenerator.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="SpeedProvider.h">
+    <ClInclude Include="FineRegistry.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="RadarSensor.h">
+    <ClInclude Include="SystemClock.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="LaserSensor.h">
+    <ClInclude Include="RuleCreator.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="RadarAdapter.h">
+    <ClInclude Include="SpeedRuleCreator.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="LaserAdapter.h">
+    <ClInclude Include="BusLaneRuleCreator.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="ViolationDecorator.h">
+    <ClInclude Include="AbstractZoneFactory.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="PriorityViolation.h">
+    <ClInclude Include="StrictCityFactory.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="DescriptionViolation.h">
+    <ClInclude Include="HighwayFactory.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="FrameBuffer.h">
+    <ClInclude Include="ClonableViolation.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="SimpleFrameBuffer.h">
+    <ClInclude Include="SpeedViolationWithClone.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="CompositeFrameBuffer.h">
+    <ClInclude Include="ControlZoneWithPrototype.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="FrameIterator.h">
+    <ClInclude Include="FramePool.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

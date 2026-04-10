@@ -6,78 +6,107 @@
 
 using namespace std;
 
-VideoProcessor::VideoProcessor(ControlZone* z, EvidenceCollector* ec, ResolutionGenerator* rg)
-    : zone(z), evidenceCollector(ec), resolutionGenerator(rg) {
-    cout << "[VideoProcessor] Создан" << endl;
+VideoProcessor::VideoProcessor(ControlZone* controlZone, EvidenceCollector* collector, ResolutionGenerator* generator)
+    : zone(controlZone), evidenceCollector(collector), resolutionGenerator(generator) {
+    cout << "[VideoProcessor] Центральный процессор видеопотока запущен" << endl;
 }
 
 VideoProcessor::~VideoProcessor() {
-    cout << "[VideoProcessor] Уничтожен" << endl;
+    cout << "[VideoProcessor] Остановка процессора видеопотока" << endl;
 }
 
-void VideoProcessor::processFrame(Frame* frame, Vehicle* v, int quality, int confidence) {
-    cout << "\n[VideoProcessor] Скорость: " << v->speed << " км/ч, Полоса: "
-        << v->lane << ", Тип ТС: " << v->getType() << endl;
+void VideoProcessor::processFrame(Frame* currentFrame, Vehicle* vehicle, int frameQuality, int ocrConfidence) {
+    cout << "\n[VideoProcessor] Анализ транспортного средства: скорость=" << vehicle->speed
+        << " км/ч, полоса=" << vehicle->lane
+        << ", тип=" << vehicle->getType() << endl;
 
-    auto violations = zone->check(v);
+    auto violations = zone->check(vehicle);
 
-    for (auto vio : violations) {
-        cout << "  [VideoProcessor] Обнаружено нарушение: " << vio->getDescription() << endl;
+    for (auto violation : violations) {
+        cout << "  [VideoProcessor] ЗАФИКСИРОВАНО НАРУШЕНИЕ: " << violation->getDescription() << endl;
 
-        vector<Frame*> frames = { frame };
-        Evidence* e = evidenceCollector->collect(vio, frames, quality);
+        vector<Frame*> evidenceFrames = { currentFrame };
+        Evidence* evidence = evidenceCollector->collect(violation, evidenceFrames, frameQuality);
 
-        if (e) {
-            e->save();
-            Resolution* r = resolutionGenerator->generate(e, v->speed, confidence);
-            if (r) {
-                r->save();
-                delete r;
+        if (evidence) {
+            evidence->save();
+            Resolution* resolution = resolutionGenerator->generate(evidence, vehicle->speed, ocrConfidence);
+            if (resolution) {
+                resolution->save();
+                delete resolution;
             }
-            delete e;
+            delete evidence;
         }
-        delete vio;
+        delete violation;
     }
 }
 
-void VideoProcessor::processFrameWithFrames(Vehicle* v, int quality, int confidence, vector<Frame*>& frames) {
-    cout << "\n[VideoProcessor] Скорость: " << v->speed << " км/ч, Полоса: "
-        << v->lane << ", Тип ТС: " << v->getType() << endl;
+void VideoProcessor::processFrameWithFrames(Vehicle* vehicle, int frameQuality, int ocrConfidence, vector<Frame*>& preCapturedFrames) {
+    cout << "\n[VideoProcessor] Комплексный анализ ТС: скорость=" << vehicle->speed
+        << " км/ч, полоса=" << vehicle->lane
+        << ", тип=" << vehicle->getType() << endl;
 
-    auto violations = zone->check(v);
+    auto violations = zone->check(vehicle);
+
+    if (violations.empty()) {
+        cout << "  [VideoProcessor] Нарушений правил дорожного движения не обнаружено" << endl;
+    }
+
+    for (auto violation : violations) {
+        cout << "  [VideoProcessor] ЗАФИКСИРОВАНО НАРУШЕНИЕ: " << violation->getDescription() << endl;
+        cout << "  [VideoProcessor] Количество кадров в доказательной базе: " << preCapturedFrames.size() << endl;
+
+        Evidence* evidence = new Evidence("DEMO_" + to_string(time(nullptr)));
+
+        if (evidence) {
+            cout << "  [VideoProcessor] Доказательства успешно собраны" << endl;
+            evidence->save();
+
+            Resolution* resolution = resolutionGenerator->generate(evidence, vehicle->speed, ocrConfidence);
+            if (resolution) {
+                cout << "  [VideoProcessor] Постановление о штрафе сформировано" << endl;
+                resolution->save();
+                delete resolution;
+            }
+            else {
+                cout << "  [VideoProcessor] Отказ в формировании постановления" << endl;
+            }
+            delete evidence;
+        }
+        else {
+            cout << "  [VideoProcessor] Не удалось собрать доказательства" << endl;
+        }
+        delete violation;
+    }
+}
+
+// НОВАЯ РЕАЛИЗАЦИЯ processVehicle
+void VideoProcessor::processVehicle(Vehicle* vehicle, int frameQuality, int ocrConfidence, vector<Frame*>& frames) {
+    cout << "\n[VideoProcessor] Обработка ТС: " << vehicle->id
+        << ", скорость=" << vehicle->speed
+        << ", тип=" << vehicle->getType() << endl;
+
+    auto violations = zone->check(vehicle);
 
     if (violations.empty()) {
         cout << "  [VideoProcessor] Нарушений не обнаружено" << endl;
+        return;
     }
 
-    for (auto vio : violations) {
-        cout << "  [VideoProcessor] Обнаружено нарушение: " << vio->getDescription() << endl;
+    for (auto violation : violations) {
+        cout << "  [VideoProcessor] Обнаружено нарушение: " << violation->getDescription() << endl;
 
-        // ВАЖНО: НЕ сохраняем кадры в Evidence, а только копируем данные
-        // Для демонстрации просто выводим информацию о кадрах
-        cout << "  [VideoProcessor] Кадров для доказательств: " << frames.size() << endl;
+        Evidence* evidence = evidenceCollector->collect(violation, frames, frameQuality);
 
-        // Создаем фиктивные доказательства без сохранения кадров
-        Evidence* e = new Evidence("DEMO_" + to_string(time(nullptr)));
-
-        if (e) {
-            cout << "  [VideoProcessor] Доказательства собраны (без сохранения кадров)" << endl;
-            e->save();
-
-            Resolution* r = resolutionGenerator->generate(e, v->speed, confidence);
-            if (r) {
-                cout << "  [VideoProcessor] Постановление сформировано" << endl;
-                r->save();
-                delete r;
+        if (evidence) {
+            evidence->save();
+            Resolution* resolution = resolutionGenerator->generate(evidence, vehicle->speed, ocrConfidence);
+            if (resolution) {
+                resolution->save();
+                delete resolution;
             }
-            else {
-                cout << "  [VideoProcessor] Постановление не сформировано" << endl;
-            }
-            delete e;  // Evidence удаляет свои кадры, но их нет
+            delete evidence;
         }
-        else {
-            cout << "  [VideoProcessor] Доказательства не собраны" << endl;
-        }
-        delete vio;
+        delete violation;
     }
 }
