@@ -175,15 +175,13 @@
     <ClInclude Include="BusLaneRuleCreator.h" />
     <ClInclude Include="BusLaneViolation.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="ClonableViolation.h" />
+    <ClInclude Include="CameraPool.h" />
     <ClInclude Include="ControlZone.h" />
-    <ClInclude Include="ControlZoneWithPrototype.h" />
     <ClInclude Include="Evidence.h" />
     <ClInclude Include="EvidenceCollector.h" />
     <ClInclude Include="EvidenceCollectorProxy.h" />
     <ClInclude Include="FineRegistry.h" />
     <ClInclude Include="Frame.h" />
-    <ClInclude Include="FramePool.h" />
     <ClInclude Include="HighwayFactory.h" />
     <ClInclude Include="LicensePlate.h" />
     <ClInclude Include="LineCrossRule.h" />
@@ -200,7 +198,6 @@
     <ClInclude Include="SpeedRule.h" />
     <ClInclude Include="SpeedRuleCreator.h" />
     <ClInclude Include="SpeedViolation.h" />
-    <ClInclude Include="SpeedViolationWithClone.h" />
     <ClInclude Include="StrictCityFactory.h" />
     <ClInclude Include="SystemClock.h" />
     <ClInclude Include="TrafficLightRule.h" />

@@ -209,16 +209,7 @@
     <ClInclude Include="HighwayFactory.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
-    <ClInclude Include="ClonableViolation.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="SpeedViolationWithClone.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="ControlZoneWithPrototype.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="FramePool.h">
+    <ClInclude Include="CameraPool.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
